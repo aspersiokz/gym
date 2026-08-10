@@ -1,4 +1,7 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0D1119">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Зал — журнал тренировок</title>
 <style>
   :root{
@@ -83,6 +86,14 @@
                border-radius:9px}
   textarea{width:100%;min-height:280px;padding:12px;border:1px solid var(--line);border-radius:12px;
            background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.6}
+  .bwrow{display:flex;gap:8px}
+  .bwrow input{flex:1;min-width:0;padding:12px;border:1px solid var(--line);border-radius:10px;
+               background:var(--bg);color:var(--text);font-family:var(--mono);font-size:16px;
+               text-align:center;font-variant-numeric:tabular-nums}
+  .bwrow button{padding:12px 16px;border:1px solid var(--line);border-radius:10px;
+                font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+                color:var(--accent);white-space:nowrap}
+  .bwlog{margin-top:10px;line-height:1.7}
   .hist{display:flex;justify-content:space-between;gap:10px;padding:10px 0;
         border-bottom:1px solid var(--line);font-size:14px}
   .hist:last-child{border-bottom:none}
@@ -183,7 +194,7 @@ function render(){
 
 function renderHome(){
   const days=parse(db.program);
-  const n=db.history.length+1, rec=(n%2===1)?0:1;
+  const n=db.history.length+1, rec=(n%2===1)?0:1, bw=db.bw||[];
   app.innerHTML=`
     <div class="card plan">
       <p class="lbl">Занятие ${n} из 8</p>
@@ -199,6 +210,17 @@ function renderHome(){
       </button>`).join('')||'<p class="empty">Программа пуста — откройте «Программа».</p>'}
     </div>
     <div class="card">
+      <p class="lbl">Вес тела</p>
+      <div class="bwrow">
+        <input id="bw" inputmode="decimal" placeholder="${bw.at(-1)?.v||'кг'}" aria-label="Вес тела, кг">
+        <button id="bwSave">Записать</button>
+      </div>
+      ${bw.length?`<div class="sub bwlog">${bw.slice(-3).reverse()
+          .map(x=>`${fmtDate(x.d)} — ${x.v} кг`).join(' · ')}<br>
+          белок ${Math.round(bw.at(-1).v*1.6)}–${Math.round(bw.at(-1).v*2)} г в день</div>`
+        :'<p class="empty">Запишите вес — посчитаю норму белка и покажу динамику.</p>'}
+    </div>
+    <div class="card">
       <p class="lbl">Последние тренировки</p>
       ${db.history.slice(-8).reverse().map(h=>`
         <div class="hist">
@@ -209,6 +231,11 @@ function renderHome(){
     <div class="nav"><button id="toProgram">Программа</button></div>`;
   app.querySelectorAll('.day').forEach(b=>b.onclick=()=>start(days[+b.dataset.day]));
   app.querySelector('#toProgram').onclick=()=>{view='program';render();};
+  app.querySelector('#bwSave').onclick=()=>{
+    const v=app.querySelector('#bw').value.trim().replace(',','.');
+    if(!(+v>0)) return;
+    (db.bw=db.bw||[]).push({d:new Date().toISOString(),v}); save(); render();
+  };
 }
 
 function start(day){
