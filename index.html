@@ -1,0 +1,338 @@
+<meta charset="utf-8">
+<title>Зал — журнал тренировок</title>
+<style>
+  :root{
+    --bg:#EEF1F6; --surface:#FFFFFF; --line:#D9E0EC; --text:#0F1420; --dim:#606E88;
+    --accent:#1F49C4; --accent-soft:#E3E9FA; --ok:#0E7A56; --ok-soft:#DCF0E8;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0D1119; --surface:#161C27; --line:#283243; --text:#E7ECF5; --dim:#8B99B2;
+      --accent:#7599FF; --accent-soft:#1C2740; --ok:#3BC796; --ok-soft:#122C25;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1119; --surface:#161C27; --line:#283243; --text:#E7ECF5; --dim:#8B99B2;
+    --accent:#7599FF; --accent-soft:#1C2740; --ok:#3BC796; --ok-soft:#122C25;
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF1F6; --surface:#FFFFFF; --line:#D9E0EC; --text:#0F1420; --dim:#606E88;
+    --accent:#1F49C4; --accent-soft:#E3E9FA; --ok:#0E7A56; --ok-soft:#DCF0E8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+       -webkit-text-size-adjust:100%;padding-bottom:96px}
+  .wrap{max-width:560px;margin:0 auto;padding:16px}
+  header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+         padding:18px 16px 10px;max-width:560px;margin:0 auto}
+  h1{font-family:var(--mono);font-size:15px;letter-spacing:.14em;text-transform:uppercase;
+     margin:0;font-weight:600}
+  .sub{font-family:var(--mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+        padding:14px;margin-bottom:12px}
+  .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+       color:var(--dim);margin:0 0 10px}
+  button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
+  .btn{display:block;width:100%;padding:15px;border-radius:12px;background:var(--accent);
+       color:#fff;font-weight:600;font-size:16px;text-align:center;border:1px solid transparent}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--text);font-weight:500}
+  .btn:active{transform:scale(.99)}
+  .days{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+  .day{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;
+       border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .day[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+  .day b{font-weight:600;font-size:16px}
+  .day span{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .day .col{display:flex;flex-direction:column;gap:3px}
+  .plan{background:var(--accent-soft);border-color:transparent}
+  .plan div{font-size:14px;line-height:1.45}
+  .row{display:flex;align-items:flex-start;gap:14px;justify-content:space-between}
+  .row details{flex:1}
+  .vid{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+       color:var(--accent);text-decoration:none;padding:4px 0;white-space:nowrap}
+  details{margin:-2px 0 10px}
+  summary{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+          color:var(--accent);cursor:pointer;padding:4px 0}
+  details p{margin:4px 0 0;font-size:13px;line-height:1.5;color:var(--dim)}
+  .ex{margin-bottom:14px}
+  .ex h3{margin:0 0 2px;font-size:16px;font-weight:600;text-wrap:balance}
+  .ex .meta{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;
+            margin-bottom:10px}
+  .set{display:grid;grid-template-columns:20px 1fr 1fr 52px;gap:8px;align-items:center;
+       margin-bottom:8px}
+  .set .n{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:center}
+  .set input{width:100%;padding:12px 10px;border:1px solid var(--line);border-radius:10px;
+             background:var(--bg);color:var(--text);font-family:var(--mono);font-size:16px;
+             text-align:center;font-variant-numeric:tabular-nums}
+  .set input:focus-visible,.day:focus-visible,.btn:focus-visible,.tick:focus-visible,
+  textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .tick{height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);
+        color:var(--dim);font-size:20px;line-height:1}
+  .tick[aria-pressed="true"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+  .set.done input{opacity:.55}
+  hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+  .rest{position:fixed;left:0;right:0;bottom:0;background:var(--surface);
+        border-top:1px solid var(--line);padding:12px 16px;display:none;
+        align-items:center;gap:12px;justify-content:center}
+  .rest.on{display:flex}
+  .rest .t{font-family:var(--mono);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;
+           min-width:76px;text-align:center}
+  .rest button{font-family:var(--mono);font-size:13px;padding:9px 12px;border:1px solid var(--line);
+               border-radius:9px}
+  textarea{width:100%;min-height:280px;padding:12px;border:1px solid var(--line);border-radius:12px;
+           background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.6}
+  .hist{display:flex;justify-content:space-between;gap:10px;padding:10px 0;
+        border-bottom:1px solid var(--line);font-size:14px}
+  .hist:last-child{border-bottom:none}
+  .hist span{font-family:var(--mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .empty{color:var(--dim);font-size:14px;margin:0}
+  .nav{display:flex;gap:8px;margin-top:16px}
+  .nav button{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;
+              font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+              color:var(--dim)}
+</style>
+
+<header>
+  <h1>Журнал</h1>
+  <div class="sub" id="today"></div>
+</header>
+<div class="wrap" id="app"></div>
+<div class="rest" id="rest">
+  <div class="t" id="restT">1:30</div>
+  <button id="rest30">+30 с</button>
+  <button id="restX">Стоп</button>
+</div>
+
+<script>
+const KEY='gym-v4';
+const DEFAULT_PROGRAM=`Тренировка А — спина, трицепс, ягодицы
+Разминка на кардиотренажёре 1x5-7 | Повторы = минуты. Велотренажёр, дорожка или эллипс в лёгком темпе, затем круговые движения плеч, таза, коленей, голеностопов.
+Ягодичный мостик со штангой на скамье (хип-траст) 4x12-15 @20-40 | Вес по ощущению: последние 2 повтора трудные, техника не ломается. Гриф на тазу через мягкую подкладку, лопатки на скамье, подъём за счёт ягодиц, пауза 2 сек вверху. Первый подход разминочный, на 30-50% легче.
+Тяга верхнего блока к груди широким хватом 4x12 @15-25 | Вес по ощущению, 2 повтора в запасе. Корпус назад на 15°, тянуть к верху груди, лопатки свести, плечи опустить от ушей. Первый подход разминочный.
+Румынская тяга со штангой 3x12 @20-30 | Вес по ощущению. Спина прямая, колени слегка согнуты и зафиксированы, таз отводим назад до середины голени, гриф скользит вдоль ног.
+Жим в хаммере на грудь сидя 3x12 @10-20 | Вес по ощущению. Лопатки сведены и прижаты к спинке, опускать плавно до растяжения груди, локти не разводить в стороны до конца.
+Разгибание рук на верхнем блоке с канатом 3x15 @7.5-12.5 | Локти прижаты к туловищу и не смещаются, внизу руки полностью разогнуть и слегка развести концы каната. Здесь отдых можно сократить до 45-60 сек.
+Планка на локтях 3x40-50 | Повторы = секунды. Тело в одну линию, ягодицы и пресс максимально напряжены, поясница не проваливается. Тяжело держать 50 сек — держите 40 и добавляйте по 5 сек каждое занятие.
+
+Тренировка Б — середина спины, плечи, ягодицы, задняя поверхность бедра
+Разминка на кардиотренажёре 1x5-7 | Повторы = минуты. Велотренажёр, дорожка или эллипс в лёгком темпе, затем круговые движения плеч, таза, коленей, голеностопов.
+Зашагивания на тумбу 30-40 см, на каждую ногу 3x10-12 @6-10 | Вес на одну руку, по ощущению. Стопа полностью на платформе, подъём за счёт передней ноги, задней не отталкиваться. Первый подход разминочный.
+Тяга нижнего блока к поясу узким хватом 4x12 @15-25 | V-рукоять, вес по ощущению. Спина прямая, тянуть к низу живота, лопатки свести и удержать 1 сек. Первый подход разминочный.
+Гиперэкстензия ягодичная 3x12-15 @0-10 | Начните с собственного веса, потом блин к груди. Скругляем верх спины, подъём за счёт ягодиц, не переразгибаемся вверху — тело в линию и стоп.
+Отведение бедра в тренажёре сидя 3x15-20 @10-20 | Средняя ягодичная — она удерживает колено от заваливания внутрь, поэтому упражнение не пропускать. Корпус чуть вперёд, разводить плавно, в конце пауза 1 сек.
+Сгибание ног в тренажёре лёжа 3x15 @10-20 | Валик на уровне лодыжек, без рывков в тазу и пояснице.
+Жим гантелей сидя на плечи 3x12 @5-8 | Вес на одну руку, по ощущению. Спинка 80-90°, спина прижата, выжимать по дуге, вверху гантели не сталкивать.`;
+
+const WEEKS=['Неделя 1 — вкатывание: подбираем вес, 2-3 повтора в запасе',
+             'Неделя 2 — тот же вес, повторы до верхней границы',
+             'Неделя 3 — +1–1,5 кг в гантелях или +1 плитка',
+             'Неделя 4 — прибавляем вес там, где верхняя граница даётся легко'];
+const week=()=>Math.min(4,Math.ceil((db.history.length+1)/2));
+const low=s=>((s||'').match(/[\d.]+/)||[''])[0];
+
+let db=load(), view='home';
+
+function load(){
+  try{ return Object.assign({program:DEFAULT_PROGRAM,history:[],session:null},
+       JSON.parse(localStorage.getItem(KEY)||'{}')); }
+  catch(e){ return {program:DEFAULT_PROGRAM,history:[],session:null}; }
+}
+function save(){ localStorage.setItem(KEY,JSON.stringify(db)); }
+
+function parse(text){
+  const days=[]; let cur=null;
+  for(const raw of text.split('\n')){
+    let line=raw.trim(); if(!line) continue;
+    let tip='',w='';
+    const p=line.split('|'); if(p.length>1){ line=p[0].trim(); tip=p.slice(1).join('|').trim(); }
+    const a=line.split('@'); if(a.length>1){ line=a[0].trim(); w=a[1].trim(); }
+    const m=line.match(/^(.+?)\s+(\d+)\s*[x×хХ]\s*([\d–—-]+)$/i);
+    if(m&&cur) cur.ex.push({name:m[1],sets:+m[2],reps:m[3],w,tip});
+    else days.push(cur={name:line,ex:[]});
+  }
+  return days.filter(d=>d.ex.length);
+}
+function fmtDate(iso){
+  return new Date(iso).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+}
+function tonnage(s){
+  return s.ex.reduce((t,e)=>t+e.sets.reduce((a,x)=>a+(x.done?(+x.w||0)*(+x.r||0):0),0),0);
+}
+function doneCount(s){
+  return s.ex.reduce((t,e)=>t+e.sets.filter(x=>x.done).length,0);
+}
+function lastFor(day,name){
+  for(let i=db.history.length-1;i>=0;i--){
+    if(db.history[i].day!==day) continue;
+    const e=db.history[i].ex.find(e=>e.name===name);
+    if(e) return e.sets.filter(s=>s.done);
+  }
+  return [];
+}
+
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const app=document.getElementById('app');
+
+function render(){
+  if(view==='program') return renderProgram();
+  if(db.session) return renderSession();
+  renderHome();
+}
+
+function renderHome(){
+  const days=parse(db.program);
+  const n=db.history.length+1, rec=(n%2===1)?0:1;
+  app.innerHTML=`
+    <div class="card plan">
+      <p class="lbl">Занятие ${n} из 8</p>
+      <div>${WEEKS[week()-1]}</div>
+    </div>
+    <div class="days">${days.map((d,i)=>`
+      <button class="day" data-day="${i}"${i===rec?' aria-pressed="true"':''}>
+        <div class="col">
+          <b>${esc(d.name)}</b>
+          <span>${d.ex.length} упражн. · ${d.ex.reduce((t,e)=>t+e.sets,0)} подходов${
+            i===rec?' · сегодня по плану':''}</span>
+        </div>
+      </button>`).join('')||'<p class="empty">Программа пуста — откройте «Программа».</p>'}
+    </div>
+    <div class="card">
+      <p class="lbl">Последние тренировки</p>
+      ${db.history.slice(-8).reverse().map(h=>`
+        <div class="hist">
+          <div>${esc(h.day)}</div>
+          <span>${fmtDate(h.date)} · ${doneCount(h)} подх. · ${Math.round(tonnage(h))} кг</span>
+        </div>`).join('')||'<p class="empty">Пока пусто. Выберите день и начните.</p>'}
+    </div>
+    <div class="nav"><button id="toProgram">Программа</button></div>`;
+  app.querySelectorAll('.day').forEach(b=>b.onclick=()=>start(days[+b.dataset.day]));
+  app.querySelector('#toProgram').onclick=()=>{view='program';render();};
+}
+
+function start(day){
+  db.session={day:day.name,date:new Date().toISOString(),
+    ex:day.ex.map(e=>({name:e.name,reps:e.reps,w:e.w,tip:e.tip,
+      sets:Array.from({length:e.sets},()=>({w:'',r:'',done:false}))}))};
+  save(); render(); scrollTo(0,0);
+}
+
+function renderSession(){
+  const s=db.session;
+  app.innerHTML=`
+    <div class="card">
+      <p class="lbl">${esc(s.day)} · занятие ${db.history.length+1} из 8</p>
+      ${s.ex.map((e,ei)=>{
+        const prev=lastFor(s.day,e.name);
+        return `<div class="ex">
+          <h3>${esc(e.name)}</h3>
+          <div class="meta">цель ${e.sets.length}×${e.reps}${e.w?` · ${esc(e.w)} кг`:''}${
+            prev.length?` · прошлый раз ${prev.map(p=>`${p.w||'—'}×${p.r||'—'}`).join(', ')}`:''}</div>
+          <div class="row">
+            ${e.tip?`<details><summary>техника</summary><p>${esc(e.tip)}</p></details>`:''}
+            <a class="vid" target="_blank" rel="noopener"
+               href="https://www.youtube.com/results?search_query=${
+                 encodeURIComponent(e.name.split(',')[0]+' техника выполнения')}">видео ↗</a>
+          </div>
+          ${e.sets.map((st,si)=>`
+            <div class="set${st.done?' done':''}">
+              <div class="n">${si+1}</div>
+              <input inputmode="decimal" placeholder="${prev[si]?.w||low(e.w)||'кг'}" value="${st.w}"
+                     data-f="w" data-e="${ei}" data-s="${si}" aria-label="Вес, подход ${si+1}">
+              <input inputmode="numeric" placeholder="${prev[si]?.r||e.reps}" value="${st.r}"
+                     data-f="r" data-e="${ei}" data-s="${si}" aria-label="Повторы, подход ${si+1}">
+              <button class="tick" aria-pressed="${st.done}" data-e="${ei}" data-s="${si}"
+                      aria-label="Отметить подход ${si+1}">✓</button>
+            </div>`).join('')}
+        </div>`;
+      }).join('')}
+      <hr>
+      <div class="sub">${doneCount(s)} подходов · ${Math.round(tonnage(s))} кг тоннаж</div>
+    </div>
+    <button class="btn" id="finish">Завершить тренировку</button>
+    <div class="nav"><button id="drop">Отменить</button></div>`;
+
+  app.querySelectorAll('input').forEach(inp=>inp.oninput=e=>{
+    s.ex[+inp.dataset.e].sets[+inp.dataset.s][inp.dataset.f]=inp.value; save();
+  });
+  app.querySelectorAll('.tick').forEach(b=>b.onclick=()=>{
+    const st=s.ex[+b.dataset.e].sets[+b.dataset.s];
+    st.done=!st.done;
+    if(st.done){
+      if(!st.r) st.r=low(String(s.ex[+b.dataset.e].reps));
+      startRest(90);
+    }
+    save(); render();
+  });
+  app.querySelector('#finish').onclick=()=>{
+    if(doneCount(s)) db.history.push(s);
+    db.session=null; stopRest(); save(); view='home'; render(); scrollTo(0,0);
+  };
+  app.querySelector('#drop').onclick=()=>{
+    if(confirm('Удалить эту тренировку без сохранения?')){
+      db.session=null; stopRest(); save(); render(); }
+  };
+}
+
+function renderProgram(){
+  app.innerHTML=`
+    <div class="card">
+      <p class="lbl">Программа</p>
+      <textarea id="prog" spellcheck="false">${esc(db.program)}</textarea>
+      <div class="meta" style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px">
+        Формат: <b>Упражнение 4x12-15 @8-10 | техника</b>. Строка без «4x12» — название дня,
+        пустая строка разделяет дни. После @ — рабочий вес, после | — заметка по технике.
+      </div>
+    </div>
+    <button class="btn" id="savep">Сохранить</button>
+    <div class="nav"><button id="back">Назад</button></div>`;
+  app.querySelector('#savep').onclick=()=>{
+    db.program=app.querySelector('#prog').value; save(); view='home'; render();
+  };
+  app.querySelector('#back').onclick=()=>{view='home';render();};
+}
+
+/* таймер отдыха */
+let restLeft=0,restTimer=null;
+const restEl=document.getElementById('rest'),restT=document.getElementById('restT');
+function startRest(sec){
+  restLeft=sec; restEl.classList.add('on'); drawRest();
+  clearInterval(restTimer);
+  restTimer=setInterval(()=>{
+    restLeft--; drawRest();
+    if(restLeft<=0){ stopRest(); beep(); }
+  },1000);
+}
+function drawRest(){ restT.textContent=Math.floor(restLeft/60)+':'+String(restLeft%60).padStart(2,'0'); }
+function stopRest(){ clearInterval(restTimer); restEl.classList.remove('on'); }
+document.getElementById('restX').onclick=stopRest;
+document.getElementById('rest30').onclick=()=>{restLeft+=30;drawRest();};
+function beep(){
+  try{
+    const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+    o.frequency.value=880; o.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(.25,a.currentTime); g.gain.exponentialRampToValueAtTime(.001,a.currentTime+.5);
+    o.start(); o.stop(a.currentTime+.5);
+  }catch(e){}
+}
+
+document.getElementById('today').textContent=
+  new Date().toLocaleDateString('ru-RU',{weekday:'short',day:'numeric',month:'long'});
+render();
+
+/* self-check: открыть страницу с #test */
+if(location.hash==='#test'){
+  const d=parse('День A\nЖим 4x8\nТяга 3 х 10-12 @15-20 | лопатки свести\n\nПустой день');
+  console.assert(d.length===1,'один непустой день',d);
+  console.assert(d[0].ex.length===2,'парсинг подходов',d);
+  console.assert(d[0].ex[1].reps==='10-12' && d[0].ex[1].w==='15-20'
+    && d[0].ex[1].tip==='лопатки свести' && d[0].ex[1].name==='Тяга','вес/повторы/техника',d[0].ex[1]);
+  console.assert(low('8-10')==='8' && low('7.5-10')==='7.5','нижняя граница',low('7.5-10'));
+  console.assert(parse('').length===0,'пустая программа');
+  const P=parse(DEFAULT_PROGRAM);
+  console.assert(P.length===2 && P.every(d=>d.ex.length===7),'программа целиком',P);
+  console.assert(P.every(d=>d.ex.every(e=>e.tip)),'у каждого упражнения есть техника',P);
+  console.log('self-check ok');
+}
+</script>
