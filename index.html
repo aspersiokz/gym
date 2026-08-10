@@ -8,7 +8,8 @@
     --bg:#EEF1F6; --surface:#FFFFFF; --line:#D9E0EC; --text:#0F1420; --dim:#606E88;
     --accent:#1F49C4; --accent-soft:#E3E9FA; --ok:#0E7A56; --ok-soft:#DCF0E8;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --sans:"Avenir Next","Avenir","Segoe UI",system-ui,Roboto,sans-serif;
+    --display:"Avenir Next Condensed","Avenir Next","Segoe UI Semibold",system-ui,sans-serif;
   }
   @media (prefers-color-scheme:dark){
     :root{
@@ -43,10 +44,15 @@
   .btn.ghost{background:transparent;border-color:var(--line);color:var(--text);font-weight:500}
   .btn:active{transform:scale(.99)}
   .days{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-  .day{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:14px;
-       border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-  .day[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
-  .day b{font-weight:600;font-size:16px}
+  .day{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .day.now{border-color:var(--accent);background:var(--accent-soft)}
+  .daygo{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left}
+  .day details{margin:8px 0 0}
+  .day ol{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--dim)}
+  .day ol i{font-family:var(--mono);font-style:normal;font-size:11px}
+  .rsub{display:block;font-family:var(--mono);font-size:11px;font-weight:400;opacity:.8;
+        letter-spacing:.06em;margin-top:3px}
+  .day b{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:.01em}
   .day span{font-family:var(--mono);font-size:12px;color:var(--dim)}
   .day .col{display:flex;flex-direction:column;gap:3px}
   .plan{background:var(--accent-soft);border-color:transparent}
@@ -60,7 +66,8 @@
           color:var(--accent);cursor:pointer;padding:4px 0}
   details p{margin:4px 0 0;font-size:13px;line-height:1.5;color:var(--dim)}
   .ex{margin-bottom:14px}
-  .ex h3{margin:0 0 2px;font-size:16px;font-weight:600;text-wrap:balance}
+  .ex h3{margin:0 0 2px;font-family:var(--display);font-size:18px;font-weight:600;
+         letter-spacing:.01em;text-wrap:balance}
   .ex .meta{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;
             margin-bottom:10px}
   .set{display:grid;grid-template-columns:20px 1fr 1fr 52px;gap:8px;align-items:center;
@@ -142,6 +149,8 @@ const WEEKS=['Неделя 1 — вкатывание: подбираем вес
              'Неделя 4 — прибавляем вес там, где верхняя граница даётся легко'];
 const week=()=>Math.min(4,Math.ceil((db.history.length+1)/2));
 const low=s=>((s||'').match(/[\d.]+/)||[''])[0];
+const podh=n=>n+' '+['подход','подхода','подходов']
+  [(n%100>4&&n%100<20)?2:[2,0,1,1,1,2][Math.min(n%10,5)]];
 
 let db=load(), view='home';
 
@@ -188,7 +197,7 @@ const app=document.getElementById('app');
 
 function render(){
   if(view==='program') return renderProgram();
-  if(db.session) return renderSession();
+  if(view==='session' && db.session) return renderSession();
   renderHome();
 }
 
@@ -200,14 +209,20 @@ function renderHome(){
       <p class="lbl">Занятие ${n} из 8</p>
       <div>${WEEKS[week()-1]}</div>
     </div>
+    ${db.session?`<button class="btn" id="resume">Продолжить: ${esc(db.session.day)}
+        <span class="rsub">отмечено: ${podh(doneCount(db.session))}</span></button>`:''}
     <div class="days">${days.map((d,i)=>`
-      <button class="day" data-day="${i}"${i===rec?' aria-pressed="true"':''}>
-        <div class="col">
+      <div class="day${i===rec&&!db.session?' now':''}">
+        <button class="daygo" data-day="${i}">
           <b>${esc(d.name)}</b>
-          <span>${d.ex.length} упражн. · ${d.ex.reduce((t,e)=>t+e.sets,0)} подходов${
+          <span>${d.ex.length} упражн. · ${podh(d.ex.reduce((t,e)=>t+e.sets,0))}${
             i===rec?' · сегодня по плану':''}</span>
-        </div>
-      </button>`).join('')||'<p class="empty">Программа пуста — откройте «Программа».</p>'}
+        </button>
+        <details><summary>состав</summary>
+          <ol>${d.ex.map(e=>`<li>${esc(e.name)} <i>${e.sets}×${e.reps}${
+            e.w?` · ${esc(e.w)} кг`:''}</i></li>`).join('')}</ol>
+        </details>
+      </div>`).join('')||'<p class="empty">Программа пуста — откройте «Программа».</p>'}
     </div>
     <div class="card">
       <p class="lbl">Вес тела</p>
@@ -225,11 +240,16 @@ function renderHome(){
       ${db.history.slice(-8).reverse().map(h=>`
         <div class="hist">
           <div>${esc(h.day)}</div>
-          <span>${fmtDate(h.date)} · ${doneCount(h)} подх. · ${Math.round(tonnage(h))} кг</span>
+          <span>${fmtDate(h.date)} · ${podh(doneCount(h))} · ${Math.round(tonnage(h))} кг</span>
         </div>`).join('')||'<p class="empty">Пока пусто. Выберите день и начните.</p>'}
     </div>
     <div class="nav"><button id="toProgram">Программа</button></div>`;
-  app.querySelectorAll('.day').forEach(b=>b.onclick=()=>start(days[+b.dataset.day]));
+  app.querySelectorAll('.daygo').forEach(b=>b.onclick=()=>{
+    if(db.session&&doneCount(db.session)&&db.session.day!==days[+b.dataset.day].name
+       &&!confirm('Начатая тренировка «'+db.session.day+'» не сохранится. Начать другую?')) return;
+    start(days[+b.dataset.day]);
+  });
+  if(db.session) app.querySelector('#resume').onclick=()=>{view='session';render();scrollTo(0,0);};
   app.querySelector('#toProgram').onclick=()=>{view='program';render();};
   app.querySelector('#bwSave').onclick=()=>{
     const v=app.querySelector('#bw').value.trim().replace(',','.');
@@ -242,7 +262,7 @@ function start(day){
   db.session={day:day.name,date:new Date().toISOString(),
     ex:day.ex.map(e=>({name:e.name,reps:e.reps,w:e.w,tip:e.tip,
       sets:Array.from({length:e.sets},()=>({w:'',r:'',done:false}))}))};
-  save(); render(); scrollTo(0,0);
+  view='session'; save(); render(); scrollTo(0,0);
 }
 
 function renderSession(){
@@ -275,10 +295,13 @@ function renderSession(){
         </div>`;
       }).join('')}
       <hr>
-      <div class="sub">${doneCount(s)} подходов · ${Math.round(tonnage(s))} кг тоннаж</div>
+      <div class="sub">${podh(doneCount(s))} · ${Math.round(tonnage(s))} кг тоннаж</div>
     </div>
     <button class="btn" id="finish">Завершить тренировку</button>
-    <div class="nav"><button id="drop">Отменить</button></div>`;
+    <div class="nav">
+      <button id="back">← К списку</button>
+      <button id="drop">Отменить</button>
+    </div>`;
 
   app.querySelectorAll('input').forEach(inp=>inp.oninput=e=>{
     s.ex[+inp.dataset.e].sets[+inp.dataset.s][inp.dataset.f]=inp.value; save();
@@ -292,6 +315,7 @@ function renderSession(){
     }
     save(); render();
   });
+  app.querySelector('#back').onclick=()=>{view='home';render();scrollTo(0,0);};
   app.querySelector('#finish').onclick=()=>{
     if(doneCount(s)) db.history.push(s);
     db.session=null; stopRest(); save(); view='home'; render(); scrollTo(0,0);
