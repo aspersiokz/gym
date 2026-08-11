@@ -369,7 +369,10 @@ function renderSession(){
     const st=s.ex[+b.dataset.e].sets[+b.dataset.s];
     st.done=!st.done;
     if(st.done){
-      if(!st.r) st.r=low(String(s.ex[+b.dataset.e].reps));
+      const e=s.ex[+b.dataset.e], si=+b.dataset.s;
+      if(!st.r) st.r=low(String(e.reps));
+      // вес не вписали — берём из предыдущего отмеченного подхода, иначе из плана
+      if(!st.w) st.w=e.sets.slice(0,si).reverse().find(x=>x.w)?.w || '';
       startRest(90);
     }
     save(); render();
