@@ -137,7 +137,8 @@
 const KEY='gym-v4';
 const DEFAULT_PROGRAM=`Тренировка А — спина, трицепс, ягодицы
 Разминка на кардиотренажёре 1x5-7 | Повторы = минуты. Велотренажёр, дорожка или эллипс в лёгком темпе, затем круговые движения плеч, таза, коленей, голеностопов.
-Ягодичный мостик со штангой на скамье (хип-траст) 4x12-15 @20-40 | Вес по ощущению: последние 2 повтора трудные, техника не ломается. Гриф на тазу через мягкую подкладку, лопатки на скамье, подъём за счёт ягодиц, пауза 2 сек вверху. Первый подход разминочный, на 30-50% легче.
+Отведение бедра в тренажёре — активация 2x20 @5-10 | Лёгкий вес, это не рабочий подход. Задача — почувствовать, как включаются ягодицы, перед основной работой. Разводить медленно, в конце пауза 1 сек, сжать намеренно.
+Ягодичный мостик со штангой на скамье (хип-траст) 4x12-15 @20-40 | СТОПЫ: в верхней точке голень строго вертикальна, колени под 90° — дальше стопы уводят нагрузку в заднюю поверхность, ближе в квадрицепс. Опора на пятки, носки чуть наружу. ВВЕРХУ: пауза 3 сек с максимальным сжатием ягодиц, таз разгибается до конца. ПОЯСНИЦА: рёбра вниз, подбородок слегка к груди, взгляд вперёд-вниз — не выгибаться. Вес по ощущению: последние 2 повтора трудные. Первый подход разминочный, на 30-50% легче.
 Тяга верхнего блока к груди широким хватом 4x12 @15-25 | Вес по ощущению, 2 повтора в запасе. Корпус назад на 15°, тянуть к верху груди, лопатки свести, плечи опустить от ушей. Первый подход разминочный.
 Румынская тяга со штангой 3x12 @20-30 | Вес по ощущению. Спина прямая, колени слегка согнуты и зафиксированы, таз отводим назад до середины голени, гриф скользит вдоль ног.
 Жим в хаммере на грудь сидя 3x12 @10-20 | Вес по ощущению. Лопатки сведены и прижаты к спинке, опускать плавно до растяжения груди, локти не разводить в стороны до конца.
@@ -210,9 +211,21 @@ function report(h){
   ].filter(x=>x!==null).join('\n');
 }
 function copyReport(h,btn){
-  const t=report(h);
-  navigator.clipboard?.writeText(t).then(()=>{btn.textContent='Скопировано';
-    setTimeout(()=>btn.textContent='Скопировать для разбора',1800);},()=>prompt('Скопируйте текст:',t));
+  const t=report(h), ok=()=>{ btn.textContent='Скопировано ✓';
+    setTimeout(()=>btn.textContent='Скопировать для разбора',1800); };
+  const fallback=()=>{                      // Safari в iframe и старые движки
+    const ta=document.createElement('textarea');
+    ta.value=t; ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,t.length);
+    const done=document.execCommand('copy'); ta.remove();
+    if(done) return ok();
+    btn.textContent='Скопируйте вручную ↓';   // буфер недоступен — показываем текст
+    if(btn.nextElementSibling?.classList.contains('rawrep')) return;
+    const box=document.createElement('textarea');
+    box.className='note rawrep'; box.readOnly=true; box.value=t;
+    btn.after(box); box.focus(); box.select();
+  };
+  navigator.clipboard?.writeText(t).then(ok,fallback) ?? fallback();
 }
 function lastFor(day,name){
   for(let i=db.history.length-1;i>=0;i--){
@@ -384,11 +397,18 @@ function renderProgram(){
       </div>
     </div>
     <button class="btn" id="savep">Сохранить</button>
-    <div class="nav"><button id="back">Назад</button></div>`;
+    <div class="nav">
+      <button id="back">Назад</button>
+      <button id="reset">Взять свежую версию</button>
+    </div>`;
   app.querySelector('#savep').onclick=()=>{
     db.program=app.querySelector('#prog').value; save(); view='home'; render();
   };
   app.querySelector('#back').onclick=()=>{view='home';render();};
+  app.querySelector('#reset').onclick=()=>{
+    if(!confirm('Заменить программу на последнюю версию? Ваши тренировки и заметки останутся.')) return;
+    db.program=DEFAULT_PROGRAM; save(); render();
+  };
 }
 
 /* таймер отдыха */
@@ -429,7 +449,7 @@ if(location.hash==='#test'){
   console.assert(low('8-10')==='8' && low('7.5-10')==='7.5','нижняя граница',low('7.5-10'));
   console.assert(parse('').length===0,'пустая программа');
   const P=parse(DEFAULT_PROGRAM);
-  console.assert(P.length===2 && P.every(d=>d.ex.length===7),'программа целиком',P);
+  console.assert(P.length===2 && P[0].ex.length===8 && P[1].ex.length===7,'программа целиком',P);
   console.assert(P.every(d=>d.ex.every(e=>e.tip)),'у каждого упражнения есть техника',P);
   console.log('self-check ok');
 }
