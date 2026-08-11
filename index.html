@@ -101,10 +101,20 @@
                 font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
                 color:var(--accent);white-space:nowrap}
   .bwlog{margin-top:10px;line-height:1.7}
-  .hist{display:flex;justify-content:space-between;gap:10px;padding:10px 0;
-        border-bottom:1px solid var(--line);font-size:14px}
+  .note{min-height:110px;font-family:var(--sans);font-size:15px;line-height:1.5}
+  .hist{margin:0;padding:10px 0;border-bottom:1px solid var(--line)}
   .hist:last-child{border-bottom:none}
-  .hist span{font-family:var(--mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .histsum{font-family:var(--sans);font-size:15px;letter-spacing:0;text-transform:none;
+           color:var(--text);display:flex;flex-direction:column;gap:3px}
+  .histsum .hm{font-family:var(--mono);font-size:12px;color:var(--dim);
+               font-variant-numeric:tabular-nums}
+  .hnote{margin:10px 0 0;padding:10px 12px;background:var(--bg);border-radius:10px;
+         font-size:14px;line-height:1.5}
+  .hex{margin:10px 0 0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--dim)}
+  .hex i{font-family:var(--mono);font-style:normal;font-size:12px;color:var(--text)}
+  .copy{margin-top:10px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;
+        font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+        color:var(--accent)}
   .empty{color:var(--dim);font-size:14px;margin:0}
   .nav{display:flex;gap:8px;margin-top:16px}
   .nav button{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;
@@ -183,6 +193,27 @@ function tonnage(s){
 function doneCount(s){
   return s.ex.reduce((t,e)=>t+e.sets.filter(x=>x.done).length,0);
 }
+function report(h){
+  const bw=(db.bw||[]).at(-1), prev=db.history.filter(x=>x.day===h.day&&x!==h).at(-1);
+  return [`${h.day}`,
+    `${fmtDate(h.date)} · занятие ${db.history.indexOf(h)+1>0?db.history.indexOf(h)+1:db.history.length+1} из 8`,
+    bw?`вес тела ${bw.v} кг`:null,
+    '',
+    ...h.ex.map(e=>{
+      const d=e.sets.filter(x=>x.done);
+      return d.length?`${e.name} (цель ${e.sets.length}×${e.reps}): ${
+        d.map(x=>`${x.w||'—'}×${x.r||'—'}`).join(', ')}`:`${e.name}: пропущено`;
+    }),
+    '',
+    `тоннаж ${Math.round(tonnage(h))} кг${prev?`, прошлый раз ${Math.round(tonnage(prev))} кг`:''}`,
+    h.note?`заметка: ${h.note}`:null
+  ].filter(x=>x!==null).join('\n');
+}
+function copyReport(h,btn){
+  const t=report(h);
+  navigator.clipboard?.writeText(t).then(()=>{btn.textContent='Скопировано';
+    setTimeout(()=>btn.textContent='Скопировать для разбора',1800);},()=>prompt('Скопируйте текст:',t));
+}
 function lastFor(day,name){
   for(let i=db.history.length-1;i>=0;i--){
     if(db.history[i].day!==day) continue;
@@ -238,10 +269,19 @@ function renderHome(){
     <div class="card">
       <p class="lbl">Последние тренировки</p>
       ${db.history.slice(-8).reverse().map(h=>`
-        <div class="hist">
-          <div>${esc(h.day)}</div>
-          <span>${fmtDate(h.date)} · ${podh(doneCount(h))} · ${Math.round(tonnage(h))} кг</span>
-        </div>`).join('')||'<p class="empty">Пока пусто. Выберите день и начните.</p>'}
+        <details class="hist">
+          <summary class="histsum">
+            <span class="hd">${esc(h.day)}</span>
+            <span class="hm">${fmtDate(h.date)} · ${podh(doneCount(h))} · ${Math.round(tonnage(h))} кг</span>
+          </summary>
+          ${h.note?`<p class="hnote">${esc(h.note)}</p>`:''}
+          <ul class="hex">${h.ex.map(e=>{
+            const d=e.sets.filter(x=>x.done);
+            return d.length?`<li>${esc(e.name)}
+              <i>${d.map(x=>`${x.w||'—'}×${x.r||'—'}`).join(', ')}</i></li>`:'';
+          }).join('')}</ul>
+          <button class="copy" data-h="${db.history.indexOf(h)}">Скопировать для разбора</button>
+        </details>`).join('')||'<p class="empty">Пока пусто. Выберите день и начните.</p>'}
     </div>
     <div class="nav"><button id="toProgram">Программа</button></div>`;
   app.querySelectorAll('.daygo').forEach(b=>b.onclick=()=>{
@@ -250,6 +290,7 @@ function renderHome(){
     start(days[+b.dataset.day]);
   });
   if(db.session) app.querySelector('#resume').onclick=()=>{view='session';render();scrollTo(0,0);};
+  app.querySelectorAll('.copy').forEach(b=>b.onclick=()=>copyReport(db.history[+b.dataset.h],b));
   app.querySelector('#toProgram').onclick=()=>{view='program';render();};
   app.querySelector('#bwSave').onclick=()=>{
     const v=app.querySelector('#bw').value.trim().replace(',','.');
@@ -297,6 +338,11 @@ function renderSession(){
       <hr>
       <div class="sub">${podh(doneCount(s))} · ${Math.round(tonnage(s))} кг тоннаж</div>
     </div>
+    <div class="card">
+      <p class="lbl">Как прошло</p>
+      <textarea id="note" class="note" spellcheck="false"
+        placeholder="Колено, самочувствие, что было тяжело, где вес мал, что поменять в следующий раз">${esc(s.note||'')}</textarea>
+    </div>
     <button class="btn" id="finish">Завершить тренировку</button>
     <div class="nav">
       <button id="back">← К списку</button>
@@ -315,6 +361,7 @@ function renderSession(){
     }
     save(); render();
   });
+  app.querySelector('#note').oninput=e=>{ s.note=e.target.value; save(); };
   app.querySelector('#back').onclick=()=>{view='home';render();scrollTo(0,0);};
   app.querySelector('#finish').onclick=()=>{
     if(doneCount(s)) db.history.push(s);
