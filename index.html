@@ -135,7 +135,7 @@
 
 <script>
 const KEY='gym-v4';
-const DEFAULT_PROGRAM=`Тренировка А — спина, трицепс, ягодицы
+const EXAMPLE_PROGRAM=`Тренировка А — спина, трицепс, ягодицы
 Разминка на кардиотренажёре 1x5-7 | Повторы = минуты. Велотренажёр, дорожка или эллипс в лёгком темпе, затем круговые движения плеч, таза, коленей, голеностопов.
 Отведение бедра в тренажёре — активация 2x20 @5-10 | Лёгкий вес, это не рабочий подход. Задача — почувствовать, как включаются ягодицы, перед основной работой. Разводить медленно, в конце пауза 1 сек, сжать намеренно.
 Ягодичный мостик со штангой на скамье (хип-траст) 4x10-12 @30-40 | СТОПЫ: в верхней точке голень строго вертикальна, колени под 90° — дальше стопы уводят нагрузку в заднюю поверхность, ближе в квадрицепс. Опора на пятки, носки чуть наружу. ВВЕРХУ: пауза 3 сек с максимальным сжатием ягодиц, таз разгибается до конца. ПОЯСНИЦА: рёбра вниз, подбородок слегка к груди, взгляд вперёд-вниз — не выгибаться. Вес по ощущению: последние 2 повтора трудные. Первый подход разминочный, на 30-50% легче.
@@ -158,7 +158,7 @@ const WEEKS=['Неделя 1 — вкатывание: подбираем вес
              'Неделя 2 — тот же вес, повторы до верхней границы',
              'Неделя 3 — +1–1,5 кг в гантелях или +1 плитка',
              'Неделя 4 — прибавляем вес там, где верхняя граница даётся легко'];
-const week=()=>Math.min(4,Math.ceil((db.history.length+1)/2));
+const week=per=>Math.min(4,Math.ceil((db.history.length+1)/(per||2)));
 const low=s=>((s||'').match(/[\d.]+/)||[''])[0];
 const podh=n=>n+' '+['подход','подхода','подходов']
   [(n%100>4&&n%100<20)?2:[2,0,1,1,1,2][Math.min(n%10,5)]];
@@ -166,9 +166,9 @@ const podh=n=>n+' '+['подход','подхода','подходов']
 let db=load(), view='home';
 
 function load(){
-  try{ return Object.assign({program:DEFAULT_PROGRAM,history:[],session:null},
+  try{ return Object.assign({program:'',history:[],session:null},
        JSON.parse(localStorage.getItem(KEY)||'{}')); }
-  catch(e){ return {program:DEFAULT_PROGRAM,history:[],session:null}; }
+  catch(e){ return {program:'',history:[],session:null}; }
 }
 function save(){ localStorage.setItem(KEY,JSON.stringify(db)); }
 
@@ -247,11 +247,11 @@ function render(){
 
 function renderHome(){
   const days=parse(db.program);
-  const n=db.history.length+1, rec=(n%2===1)?0:1, bw=db.bw||[];
+  const n=db.history.length+1, rec=(n-1)%(days.length||1), bw=db.bw||[];
   app.innerHTML=`
     <div class="card plan">
-      <p class="lbl">Занятие ${n} из 8</p>
-      <div>${WEEKS[week()-1]}</div>
+      <p class="lbl">Занятие ${n} из ${(days.length||2)*4}</p>
+      <div>${WEEKS[week(days.length)-1]}</div>
     </div>
     ${db.session?`<button class="btn" id="resume">Продолжить: ${esc(db.session.day)}
         <span class="rsub">отмечено: ${podh(doneCount(db.session))}</span></button>`:''}
@@ -266,7 +266,8 @@ function renderHome(){
           <ol>${d.ex.map(e=>`<li>${esc(e.name)} <i>${e.sets}×${e.reps}${
             e.w?` · ${esc(e.w)} кг`:''}</i></li>`).join('')}</ol>
         </details>
-      </div>`).join('')||'<p class="empty">Программа пуста — откройте «Программа».</p>'}
+      </div>`).join('')||`<p class="empty">Программа пуста. Откройте «Программа» внизу —
+        впишите свои упражнения или вставьте пример одной кнопкой.</p>`}
     </div>
     <div class="card">
       <p class="lbl">Вес тела</p>
@@ -393,24 +394,48 @@ function renderProgram(){
   app.innerHTML=`
     <div class="card">
       <p class="lbl">Программа</p>
-      <textarea id="prog" spellcheck="false">${esc(db.program)}</textarea>
+      <textarea id="prog" spellcheck="false" placeholder="Тренировка А — грудь, спина&#10;Жим гантелей лёжа 4x8-10 @20 | Лопатки сведены, локти под 45°&#10;Тяга верхнего блока 4x12 @35&#10;&#10;Тренировка Б — ноги, плечи&#10;Приседания со штангой 4x10 @40&#10;Жим гантелей сидя 3x12 @8">${esc(db.program)}</textarea>
       <div class="meta" style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px">
         Формат: <b>Упражнение 4x12-15 @8-10 | техника</b>. Строка без «4x12» — название дня,
         пустая строка разделяет дни. После @ — рабочий вес, после | — заметка по технике.
       </div>
     </div>
     <button class="btn" id="savep">Сохранить</button>
+    <div class="card">
+      <p class="lbl">Перенос данных</p>
+      <textarea id="dump" spellcheck="false" style="min-height:80px"
+        placeholder="Переезд на новый адрес: на старом сайте нажмите «Скопировать данные», вставьте сюда на новом и нажмите «Импорт». Переедут программа, история и неделя."></textarea>
+      <div class="nav">
+        <button id="expData">Скопировать данные</button>
+        <button id="impData">Импорт</button>
+      </div>
+    </div>
     <div class="nav">
       <button id="back">Назад</button>
-      <button id="reset">Взять свежую версию</button>
+      <button id="reset">Вставить пример</button>
     </div>`;
   app.querySelector('#savep').onclick=()=>{
     db.program=app.querySelector('#prog').value; save(); view='home'; render();
   };
   app.querySelector('#back').onclick=()=>{view='home';render();};
+  app.querySelector('#expData').onclick=e=>{
+    const ta=app.querySelector('#dump');
+    ta.value=JSON.stringify(db); ta.focus(); ta.select();
+    try{ navigator.clipboard.writeText(ta.value); }catch(_){}
+    e.target.textContent='Скопировано — вставьте на новом сайте';
+  };
+  app.querySelector('#impData').onclick=()=>{
+    let d; try{ d=JSON.parse(app.querySelector('#dump').value); }catch(_){}
+    if(!d||!(d.program!==undefined&&Array.isArray(d.history))){
+      alert('Не похоже на данные журнала. На старом сайте нажмите «Скопировать данные» и вставьте текст сюда целиком.'); return; }
+    if((db.history.length||db.program.trim())&&
+       !confirm('Заменить программу и историю на вставленные?')) return;
+    db=Object.assign({program:'',history:[],session:null},d); save(); view='home'; render();
+  };
   app.querySelector('#reset').onclick=()=>{
-    if(!confirm('Заменить программу на последнюю версию? Ваши тренировки и заметки останутся.')) return;
-    db.program=DEFAULT_PROGRAM; save(); render();
+    if(db.program.trim()&&
+       !confirm('Заменить программу примером? Ваши тренировки и заметки останутся.')) return;
+    db.program=EXAMPLE_PROGRAM; save(); render();
   };
 }
 
@@ -451,8 +476,8 @@ if(location.hash==='#test'){
     && d[0].ex[1].tip==='лопатки свести' && d[0].ex[1].name==='Тяга','вес/повторы/техника',d[0].ex[1]);
   console.assert(low('8-10')==='8' && low('7.5-10')==='7.5','нижняя граница',low('7.5-10'));
   console.assert(parse('').length===0,'пустая программа');
-  const P=parse(DEFAULT_PROGRAM);
-  console.assert(P.length===2 && P[0].ex.length===8 && P[1].ex.length===7,'программа целиком',P);
+  const P=parse(EXAMPLE_PROGRAM);
+  console.assert(P.length===2 && P[0].ex.length===8 && P[1].ex.length===7,'пример целиком',P);
   console.assert(P.every(d=>d.ex.every(e=>e.tip)),'у каждого упражнения есть техника',P);
   console.log('self-check ok');
 }
