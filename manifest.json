@@ -1,0 +1,17 @@
+{
+  "name": "Подход — журнал тренировок",
+  "short_name": "Подход",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0D1119",
+  "theme_color": "#0D1119",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Crect%20width='512'%20height='512'%20rx='112'%20fill='%231F49C4'/%3E%3Ctext%20x='256'%20y='360'%20font-family='Arial,sans-serif'%20font-size='300'%20font-weight='700'%20fill='white'%20text-anchor='middle'%3E%D0%9F%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
